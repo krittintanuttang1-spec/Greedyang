@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกมจำลองกรีดยางพารา & บีบขี้ยาง ASMR</title>
+    <style>
+        /* ==========================================
+           1. Base & Reset Styles (Self-Contained CSS)
+           ========================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #141c10;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #f5f5f4;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ==========================================
+           2. Glassmorphism Panels & HUD Layout
+           ========================================== */
+        .glass-panel {
+            background: rgba(20, 26, 17, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Top HUD Bar */
+        .top-hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            z-index: 20;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .stat-pill {
+            padding: 8px 14px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .stat-money {
+            color: #fcd34d;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .stat-day {
+            color: #6ee7b7;
+        }
+
+        .icon-btn {
+            padding: 8px 12px;
+            border-radius: 14px;
+            color: #f5f5f4;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.12s ease, background 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* Guide Banner */
+        .guide-banner {
+            position: fixed;
+            top: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 440px;
+            z-index: 15;
+            border-radius: 18px;
+            padding: 10px 14px;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .guide-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-badge {
+            background: #f59e0b;
+            color: #1c1917;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .guide-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .guide-desc {
+            font-size: 11.5px;
+            color: #d6d3d1;
+            line-height: 1.35;
+        }
+
+        /* 10-Second Coagulation Status Box */
+        .coag-box {
+            position: fixed;
+            top: 134px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 380px;
+            z-index: 16;
+            border-radius: 16px;
+            padding: 10px 14px;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            pointer-events: none;
+        }
+
+        .coag-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .coag-label {
+            color: #fde68a;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fbbf24;
+            animation: pulseAnim 1s infinite;
+        }
+
+        @keyframes pulseAnim {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
+        }
+
+        .coag-timer {
+            font-family: monospace;
+            font-weight: 800;
+            color: #6ee7b7;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            background: rgba(12, 10, 9, 0.85);
+            border-radius: 999px;
+            padding: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #ffffff, #fde68a, #f59e0b);
+            transition: width 0.1s linear;
+        }
+
+        /* Action Buttons Overlay (Harvest / Squish / Next Day) */
+        .action-overlay {
+            position: fixed;
+            bottom: 104px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 94%;
+            max-width: 520px;
+            z-index: 20;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary-squish {
+            background: linear-gradient(135deg, #34d399, #14b8a6);
+            color: #052e16;
+            border: none;
+            font-weight: 800;
+            font-size: 13.5px;
+            padding: 11px 18px;
+            border-radius: 999px;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            animation: floatBounce 1.6s ease-in-out infinite;
+        }
+
+        @keyframes floatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .btn-harvest {
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            color: #1c1917;
+            border: none;
+            font-weight: 800;
+            font-size: 13.5px;
+            padding: 11px 18px;
+            border-radius: 999px;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-dark {
+            background: rgba(0, 0, 0, 0.22);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11.5px;
+        }
+
+        .btn-next-day {
+            color: #6ee7b7;
+            border: 1px solid rgba(52, 211, 153, 0.4);
+            font-weight: 700;
+            font-size: 13px;
+            padding: 11px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary-squish:active,
+        .btn-harvest:active,
+        .btn-next-day:active {
+            transform: scale(0.95);
+        }
+
+        /* Bottom Tool Dock */
+        .tool-dock {
+            position: fixed;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 94%;
+            max-width: 440px;
+            z-index: 20;
+            border-radius: 22px;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 8px 6px;
+            color: #e7e5e4;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .tool-btn.active {
+            background: rgba(245, 158, 11, 0.22);
+            border-color: #fbbf24;
+            color: #fef3c7;
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.25);
+        }
+
+        .tool-btn.dimmed {
+            opacity: 0.55;
+        }
+
+        .tool-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .tool-name {
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .tool-check {
+            position: absolute;
+            top: 5px;
+            right: 6px;
+            background: #10b981;
+            color: #052e16;
+            font-size: 10px;
+            font-weight: 900;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Toast Notification */
+        .toast-msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(17, 24, 15, 0.92);
+            border: 1px solid rgba(251, 191, 36, 0.45);
+            color: #fef3c7;
+            padding: 12px 20px;
+            border-radius: 16px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: center;
+            z-index: 60;
+            pointer-events: none;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: opacity 0.22s ease;
+            max-width: 85%;
+        }
+
+        .toast-msg.show {
+            opacity: 1;
+        }
+
+        /* ==========================================
+           3. ASMR Cup-Lump Slime Squish Modal
+           ========================================== */
+        .slime-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgba(12, 16, 10, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .slime-top-bar {
+            position: relative;
+            z-index: 45;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .slime-info-card {
+            border-radius: 18px;
+            padding: 10px 14px;
+            border-left: 4px solid #34d399;
+            max-width: 72%;
+        }
+
+        .slime-info-card h2 {
+            font-size: 15px;
+            font-weight: 800;
+            color: #6ee7b7;
+            margin-bottom: 3px;
+        }
+
+        .slime-info-card p {
+            font-size: 11.5px;
+            color: #d6d3d1;
+            line-height: 1.35;
+        }
+
+        .slime-close-btn {
+            border-radius: 14px;
+            padding: 10px 14px;
+            color: #f5f5f4;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        #slimeCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 41;
+            cursor: grab;
+        }
+
+        #slimeCanvas:active {
+            cursor: grabbing;
+        }
+
+        .slime-bottom-bar {
+            position: relative;
+            z-index: 45;
+            padding: 18px 14px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-reset-slime {
+            color: #fde68a;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            padding: 11px 18px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main 2.5D Rubber Plantation Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top HUD -->
+    <div class="top-hud">
+        <div class="hud-group">
+            <div class="glass-panel stat-pill">
+                <span>💰</span>
+                <span id="moneyDisplay" class="stat-money">0 ฿</span>
+            </div>
+            <div class="glass-panel stat-pill">
+                <span id="dayDisplay" class="stat-day">วันที่ 1</span>
+                <span style="opacity:0.4">|</span>
+                <span>ต้นที่ <strong id="treeNumber">1</strong></span>
+            </div>
+        </div>
+        <div class="hud-group">
+            <button id="newTreeBtn" class="glass-panel icon-btn" title="เปลี่ยนต้นยางใหม่">
+                <span>🌳</span>
+                <span>ต้นใหม่</span>
+            </button>
+            <button id="soundToggleBtn" class="glass-panel icon-btn" title="เปิด/ปิดเสียง">
+                <span id="soundIcon">🔊</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Step-by-Step Guide Banner -->
+    <div class="glass-panel guide-banner">
+        <div class="guide-header">
+            <span id="stepBadge" class="step-badge">ขั้นที่ 1/3</span>
+            <span id="guideTitle" class="guide-title">ใช้มีดกรีดยางลากเฉียงลงมาตามรอยประ</span>
+        </div>
+        <div id="guideDesc" class="guide-desc">กดค้างแล้วลากจากซ้ายบนโค้งลงมาขวาล่างอย่างสม่ำเสมอ</div>
+    </div>
+
+    <!-- 10-Second Coagulation Progress Box -->
+    <div id="coagStatusBox" class="glass-panel coag-box hidden">
+        <div class="coag-top">
+            <span id="coagLabel" class="coag-label">
+                <span class="pulse-dot"></span>
+                <span>น้ำยางกำลังจับตัวแข็ง...</span>
+            </span>
+            <span id="coagTimerText" class="coag-timer">10.0 วิ</span>
+        </div>
+        <div class="progress-track">
+            <div id="coagProgressBar" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Action Buttons (Squish / Harvest / Next Day) -->
+    <div id="actionOverlay" class="action-overlay hidden">
+        <button id="squishModeBtn" class="btn-primary-squish hidden">
+            <span>🫧 แกะยางก้อนถ้วยมาบีบเล่น</span>
+        </button>
+        <button id="harvestBtn" class="btn-harvest">
+            <span>🪣 เก็บยางขาย</span>
+            <span id="harvestValueBadge" class="badge-dark">+0 ฿</span>
+        </button>
+        <button id="nextDayBtn" class="glass-panel btn-next-day">
+            <span>🌅 วันถัดไป (กรีดเพิ่ม)</span>
+        </button>
+    </div>
+
+    <!-- Bottom Tool Dock -->
+    <div class="glass-panel tool-dock">
+        <button id="toolKnife" class="tool-btn active">
+            <span id="checkKnife" class="tool-check hidden">✓</span>
+            <span class="tool-icon">🔪</span>
+            <span class="tool-name">1. มีดกรีดยาง</span>
+        </button>
+        <button id="toolSpout" class="tool-btn dimmed">
+            <span id="checkSpout" class="tool-check hidden">✓</span>
+            <span class="tool-icon">📐</span>
+            <span class="tool-name">2. ปักลิ่นยาง</span>
+        </button>
+        <button id="toolCup" class="tool-btn dimmed">
+            <span id="checkCup" class="tool-check hidden">✓</span>
+            <span class="tool-icon">🥣</span>
+            <span class="tool-name">3. แขวนถ้วยยาง</span>
+        </button>
+    </div>
+
+    <!-- Toast Message -->
+    <div id="toastBox" class="toast-msg"></div>
+
+    <!-- ASMR Cup-Lump Slime Squish Modal -->
+    <div id="slimeModal" class="slime-modal hidden">
+        <div class="slime-top-bar">
+            <div class="glass-panel slime-info-card">
+                <h2>🫧 บีบเล่นยางก้อนถ้วย (ASMR)</h2>
+                <p>ใช้นิ้วจิ้ม กดค้าง บีบ ขยำ หรือดึงยืดเนื้อยางหนึบๆ ได้เลย!</p>
+            </div>
+            <button id="closeSlimeBtn" class="glass-panel slime-close-btn">✕ กลับไปที่ต้นยาง</button>
+        </div>
+
+        <canvas id="slimeCanvas"></canvas>
+
+        <div class="slime-bottom-bar">
+            <button id="resetSlimeShapeBtn" class="glass-panel btn-reset-slime">
+                🔄 ปั้นก้อนยางคืนรูปเดิม
+            </button>
+            <button id="sellFromSlimeBtn" class="btn-harvest">
+                <span>💰 ขายยางก้อนถ้วยนี้</span>
+                <span id="slimeSellBadge" class="badge-dark">+45 ฿</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. Web Audio API Sound Synthesizer
+        // ==========================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.lastScrapeTime = 0;
+                this.lastSquishTime = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggle() {
+                this.enabled = !this.enabled;
+                return this.enabled;
+            }
+
+            // เสียงมีดกรีดเปลือกยาง (Bark Scraping)
+            playBarkScrape() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                if (now - this.lastScrapeTime < 0.055) return;
+                this.lastScrapeTime = now;
+
+                const duration = 0.075;
+                const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < bufferSize; i++) {
+                    const env = 1 - (i / bufferSize);
+                    data[i] = (Math.random() * 2 - 1) * env * 0.7;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1600 + Math.random() * 700, now);
+                filter.Q.value = 2.4;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            // เสียงปักลิ่นยาง / แขวนถ้วย (Metallic Clink)
+            playMetalInstall(pitch = 720) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(pitch, now);
+                osc.frequency.exponentialRampToValueAtTime(pitch * 0.45, now + 0.16);
+
+                gain.gain.setValueAtTime(0.28, now);
+                gain.gain.exponentialRampToValueAtTime(0.005, now + 0.17);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            // เสียงหยดน้ำยางลงถ้วย (Latex Water Drop)
+            playLatexDrop() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                const baseFreq = 580 + Math.random() * 140;
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.65, now + 0.085);
+
+                gain.gain.setValueAtTime(0.09, now);
+                gain.gain.exponentialRampToValueAtTime(0.002, now + 0.09);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.095);
+            }
+
+            // เสียงเก็บเงินขายยาง (Coin Chime)
+            playCoinSound() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [880, 1174.66, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                    gain.gain.setValueAtTime(0.18, now + idx * 0.07);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + idx * 0.07 + 0.32);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.07);
+                    osc.stop(now + idx * 0.07 + 0.34);
+                });
+            }
+
+            // เสียงแกะก้อนยางออกจากถ้วย (Suction Pop)
+            playPeelPop() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+                osc.frequency.exponentialRampToValueAtTime(210, now + 0.24);
+
+                gain.gain.setValueAtTime(0.32, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.26);
+            }
+
+            // เสียงบีบสไลม์/ยางพารา ASMR "ฟึดๆ ฟิดๆ แจ๊ะๆ หนึบๆ"
+            playSlimeSquish(intensity = 0.7, isPoke = false) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                if (!isPoke && now - this.lastSquishTime < 0.065) return;
+                this.lastSquishTime = now;
+
+                const duration = isPoke ? 0.16 : 0.11;
+                const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < bufferSize; i++) {
+                    const env = Math.sin((i / bufferSize) * Math.PI);
+                    const microPop = Math.random() > 0.94 ? (Math.random() * 2 - 1) * 1.6 : 0;
+                    data[i] = ((Math.random() * 2 - 1) * 0.55 + microPop) * env;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                const startFreq = isPoke ? 550 + Math.random() * 250 : 750 + Math.random() * 450;
+                const endFreq = isPoke ? 1350 + Math.random() * 400 : 380 + Math.random() * 300;
+                filter.frequency.setValueAtTime(startFreq, now);
+                filter.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+                filter.Q.value = 5.2;
+
+                const gain = this.ctx.createGain();
+                const vol = Math.min(0.38, 0.14 + intensity * 0.22);
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(vol, now + duration * 0.25);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+
+                if (isPoke) {
+                    const subOsc = this.ctx.createOscillator();
+                    const subGain = this.ctx.createGain();
+                    subOsc.type = 'triangle';
+                    subOsc.frequency.setValueAtTime(140, now);
+                    subOsc.frequency.exponentialRampToValueAtTime(68, now + 0.14);
+                    subGain.gain.setValueAtTime(0.22, now);
+                    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    subOsc.connect(subGain);
+                    subGain.connect(this.ctx.destination);
+                    subOsc.start(now);
+                    subOsc.stop(now + 0.16);
+                }
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // ==========================================
+        // 2. Game State & Tree Metrics
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const state = {
+            width: 0,
+            height: 0,
+            money: 0,
+            day: 1,
+            treeIndex: 1,
+            activeTool: 'knife', // 'knife' | 'spout' | 'cup'
+            cutProgress: 0,      // 0 -> 1
+            pastCuts: [],        // ประวัติรอยกรีดวันก่อนๆ
+            spoutInstalled: false,
+            spoutAnim: 0,
+            cupInstalled: false,
+            cupAnim: 0,
+            cupSwing: 0,
+            latexFlowAmount: 0,
+            cupFillLevel: 0,
+            coagTime: 0,
+            coagDuration: 10.0,  // แข็งตัวภายใน 10 วินาที
+            isSolidified: false,
+            slimeModeOpen: false,
+            dropTimer: 0,
+            droplets: [],
+            barkChips: [],
+            pointer: { x: 0, y: 0, active: false }
+        };
+
+        const treeMetrics = {
+            centerX: 0,
+            trunkWidth: 160,
+            leftEdge: 0,
+            rightEdge: 0,
+            cutTopY: 0,
+            cutBottomY: 0,
+            cupY: 0,
+            lichenSpots: [],
+            barkLines: [],
+            bgTrees: []
+        };
+
+        // ==========================================
+        // 3. Procedural Tree & Plantation Assets
+        // ==========================================
+        function generateTreeAssets() {
+            treeMetrics.lichenSpots = [];
+            for (let i = 0; i < 42; i++) {
+                treeMetrics.lichenSpots.push({
+                    relX: (Math.random() - 0.5) * 0.88,
+                    relY: 0.08 + Math.random() * 0.86,
+                    rx: 6 + Math.random() * 16,
+                    ry: 5 + Math.random() * 13,
+                    rot: Math.random() * Math.PI,
+                    isGreen: Math.random() > 0.35
+                });
+            }
+
+            treeMetrics.barkLines = [];
+            for (let i = 0; i < 55; i++) {
+                treeMetrics.barkLines.push({
+                    relX: (Math.random() - 0.5) * 0.94,
+                    startY: Math.random() * 0.8,
+                    len: 0.08 + Math.random() * 0.22,
+                    alpha: 0.12 + Math.random() * 0.2
+                });
+            }
+
+            treeMetrics.bgTrees = [];
+            const positions = [0.06, 0.16, 0.26, 0.74, 0.84, 0.94];
+            positions.forEach((px, idx) => {
+                treeMetrics.bgTrees.push({
+                    relX: px + (Math.random() - 0.5) * 0.03,
+                    width: 26 + (idx % 3) * 14,
+                    shade: idx % 2 === 0 ? '#3f472e' : '#2d361e',
+                    hasCup: idx === 1 || idx === 4
+                });
+            });
+        }
+
+        function resizeCanvas() {
+            state.width = window.innerWidth;
+            state.height = window.innerHeight;
+            canvas.width = state.width;
+            canvas.height = state.height;
+
+            treeMetrics.centerX = state.width * 0.5;
+            treeMetrics.trunkWidth = Math.min(Math.max(state.width * 0.44, 155), 255);
+            treeMetrics.leftEdge = treeMetrics.centerX - treeMetrics.trunkWidth * 0.5;
+            treeMetrics.rightEdge = treeMetrics.centerX + treeMetrics.trunkWidth * 0.5;
+
+            // ตำแหน่งรอยกรีดกินต่ำลงมาเรื่อยๆ ตามจำนวนวัน
+            const dayOffset = (state.day - 1) * 14;
+            treeMetrics.cutTopY = state.height * 0.31 + dayOffset;
+            treeMetrics.cutBottomY = treeMetrics.cutTopY + treeMetrics.trunkWidth * 0.46;
+            treeMetrics.cupY = state.height * 0.31 + treeMetrics.trunkWidth * 0.46 + 135;
+        }
+
+        // คำนวณจุดโค้งตามแนวลำต้นทรงกระบอก (t = 0 ซ้ายบน -> t = 1 ขวาล่าง)
+        function getCutCurvePoint(t, customTopY = treeMetrics.cutTopY, customBottomY = treeMetrics.cutBottomY) {
+            const startX = treeMetrics.leftEdge + treeMetrics.trunkWidth * 0.08;
+            const endX = treeMetrics.centerX + treeMetrics.trunkWidth * 0.16;
+            const x = startX + (endX - startX) * t;
+            // โค้งรับกับความนูนของลำต้น
+            const linearY = customTopY + (customBottomY - customTopY) * t;
+            const cylinderBulge = Math.sin(t * Math.PI) * 14;
+            return { x, y: linearY + cylinderBulge };
+        }
+
+        // ==========================================
+        // 4. Toast & UI Updates
+        // ==========================================
+        let toastTimer = null;
+        function showToast(msg) {
+            const box = document.getElementById('toastBox');
+            box.textContent = msg;
+            box.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                box.classList.remove('show');
+            }, 2600);
+        }
+
+        function updateUI() {
+            document.getElementById('moneyDisplay').textContent = `${state.money.toLocaleString()} ฿`;
+            document.getElementById('dayDisplay').textContent = `วันที่ ${state.day}`;
+            document.getElementById('treeNumber').textContent = state.treeIndex;
+
+            const btnKnife = document.getElementById('toolKnife');
+            const btnSpout = document.getElementById('toolSpout');
+            const btnCup = document.getElementById('toolCup');
+
+            [btnKnife, btnSpout, btnCup].forEach(b => b.classList.remove('active'));
+            if (state.activeTool === 'knife') btnKnife.classList.add('active');
+            if (state.activeTool === 'spout') btnSpout.classList.add('active');
+            if (state.activeTool === 'cup') btnCup.classList.add('active');
+
+            btnSpout.classList.toggle('dimmed', state.cutProgress < 1);
+            btnCup.classList.toggle('dimmed', !state.spoutInstalled);
+
+            document.getElementById('checkKnife').classList.toggle('hidden', state.cutProgress < 1);
+            document.getElementById('checkSpout').classList.toggle('hidden', !state.spoutInstalled);
+            document.getElementById('checkCup').classList.toggle('hidden', !state.cupInstalled);
+
+            const stepBadge = document.getElementById('stepBadge');
+            const guideTitle = document.getElementById('guideTitle');
+            const guideDesc = document.getElementById('guideDesc');
+
+            if (state.cutProgress < 1) {
+                stepBadge.textContent = 'ขั้นที่ 1/3';
+                stepBadge.style.background = '#f59e0b';
+                guideTitle.textContent = state.day === 1
+                    ? 'ใช้มีดกรีดยางลากเฉียงลงมาตามรอยประ'
+                    : `วันที่ ${state.day}: กรีดกินหน้ายางต่ำลงมาจากรอยเดิม`;
+                guideDesc.textContent = 'กดค้างแล้วลากจากซ้ายบนโค้งลงมาขวาล่างอย่างสม่ำเสมอ';
+            } else if (!state.spoutInstalled) {
+                stepBadge.textContent = 'ขั้นที่ 2/3';
+                stepBadge.style.background = '#38bdf8';
+                guideTitle.textContent = 'ปัก "ลิ่นยาง" ที่ปลายล่างสุดของรอยกรีด';
+                guideDesc.textContent = 'แตะบริเวณปลายรอยกรีดด้านขวาเพื่อปักรางรับน้ำยาง';
+            } else if (!state.cupInstalled) {
+                stepBadge.textContent = 'ขั้นที่ 3/3';
+                stepBadge.style.background = '#34d399';
+                guideTitle.textContent = 'คล้องลวดและแขวน "ถ้วยรับน้ำยางสีดำ"';
+                guideDesc.textContent = 'แตะบริเวณลำต้นใต้ลิ่นยางเพื่อแขวนถ้วยรับน้ำยาง';
+            } else if (state.isSolidified) {
+                stepBadge.textContent = 'แข็งตัวแล้ว!';
+                stepBadge.style.background = '#34d399';
+                guideTitle.textContent = 'น้ำยางแข็งตัวเป็น "ยางก้อนถ้วย" แล้ว!';
+                guideDesc.textContent = 'แตะที่ถ้วยยางหรือกดปุ่มด้านล่างเพื่อแกะออกมาบีบเล่นแบบสไลม์ได้เลย!';
+            } else {
+                stepBadge.textContent = 'กำลังเก็บเกี่ยว';
+                stepBadge.style.background = '#10b981';
+                const pct = Math.round(state.cupFillLevel * 100);
+                guideTitle.textContent = `น้ำยางกำลังไหลและเริ่มจับตัว (${pct}%)`;
+                guideDesc.textContent = 'รอน้ำยางแข็งตัวครบ 10 วินาที เพื่อแกะออกมาบีบเล่นแบบสไลม์';
+            }
+
+            // 10-Second Coagulation Box
+            const coagBox = document.getElementById('coagStatusBox');
+            if (state.cutProgress >= 1 && state.spoutInstalled && state.cupInstalled && state.cupFillLevel > 0.04) {
+                coagBox.classList.remove('hidden');
+                const coagPct = Math.min(100, Math.round((state.coagTime / state.coagDuration) * 100));
+                const remainSec = Math.max(0, state.coagDuration - state.coagTime).toFixed(1);
+                document.getElementById('coagProgressBar').style.width = `${coagPct}%`;
+
+                if (state.isSolidified) {
+                    document.getElementById('coagLabel').innerHTML = '✅ แข็งตัวเป็นยางก้อนถ้วยพร้อมแกะแล้ว!';
+                    document.getElementById('coagTimerText').textContent = '100%';
+                } else {
+                    document.getElementById('coagLabel').innerHTML =
+                        '<span class="pulse-dot"></span><span>กำลังแข็งตัวเป็นขี้ยาง...</span>';
+                    document.getElementById('coagTimerText').textContent = `เหลือ ${remainSec} วิ`;
+                }
+            } else {
+                coagBox.classList.add('hidden');
+            }
+
+            // Action Buttons Overlay
+            const actionOverlay = document.getElementById('actionOverlay');
+            const squishBtn = document.getElementById('squishModeBtn');
+            if (state.cutProgress >= 1 && state.spoutInstalled && state.cupInstalled) {
+                actionOverlay.classList.remove('hidden');
+                const bonus = state.isSolidified ? 15 : 0;
+                const estVal = Math.max(0, Math.round(state.cupFillLevel * 45) + bonus);
+                document.getElementById('harvestValueBadge').textContent = `+${estVal} ฿`;
+                document.getElementById('slimeSellBadge').textContent = `+${Math.max(25, estVal)} ฿`;
+
+                if (state.isSolidified) {
+                    squishBtn.classList.remove('hidden');
+                } else {
+                    squishBtn.classList.add('hidden');
+                }
+            } else {
+                actionOverlay.classList.add('hidden');
+                squishBtn.classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // 5. Player Interactions & Actions
+        // ==========================================
+        function getPointerPos(e) {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function handlePointerDown(e) {
+            if (state.slimeModeOpen) return;
+            sound.init();
+            const pos = getPointerPos(e);
+            state.pointer.x = pos.x;
+            state.pointer.y = pos.y;
+            state.pointer.active = true;
+
+            // แตะที่ถ้วยยางเมื่อแข็งตัวแล้ว เพื่อเปิดโหมดบีบสไลม์
+            if (state.isSolidified && state.cupInstalled) {
+                const endPt = getCutCurvePoint(1.0);
+                const distToCup = Math.hypot(pos.x - (endPt.x + 2), pos.y - (treeMetrics.cupY + 12));
+                if (distToCup < 80) {
+                    openSlimeMode();
+                    return;
+                }
+            }
+
+            if (state.activeTool === 'knife' && state.cutProgress < 1) {
+                advanceCut(pos.x, pos.y);
+            } else if (state.activeTool === 'spout') {
+                if (state.cutProgress < 1) {
+                    showToast('กรีดเปิดหน้ายางให้สุดร่องก่อนปักลิ่นยางนะ!');
+                    return;
+                }
+                const endPt = getCutCurvePoint(1.0);
+                if (Math.hypot(pos.x - endPt.x, pos.y - endPt.y) < 110) {
+                    if (!state.spoutInstalled) {
+                        state.spoutInstalled = true;
+                        state.activeTool = 'cup';
+                        sound.playMetalInstall(840);
+                        showToast('ปักลิ่นยางเรียบร้อย! ขั้นต่อไปนำถ้วยมาแขวน');
+                        updateUI();
+                    }
+                } else {
+                    showToast('แตะบริเวณปลายรอยกรีดด้านขวาเพื่อปักลิ่นยาง');
+                }
+            } else if (state.activeTool === 'cup') {
+                if (!state.spoutInstalled) {
+                    showToast('ปักลิ่นยางก่อนแขวนถ้วยรับน้ำยางนะ!');
+                    return;
+                }
+                const endPt = getCutCurvePoint(1.0);
+                if (Math.hypot(pos.x - endPt.x, pos.y - treeMetrics.cupY) < 135) {
+                    if (!state.cupInstalled) {
+                        state.cupInstalled = true;
+                        state.cupSwing = 0.14;
+                        sound.playMetalInstall(540);
+                        showToast('แขวนถ้วยเรียบร้อย! น้ำยางจะแข็งตัวใน 10 วินาที');
+                        updateUI();
+                    }
+                } else {
+                    showToast('แตะบริเวณลำต้นใต้ลิ่นยางเพื่อแขวนถ้วย');
+                }
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (state.slimeModeOpen) return;
+            const pos = getPointerPos(e);
+            state.pointer.x = pos.x;
+            state.pointer.y = pos.y;
+
+            if (state.pointer.active && state.activeTool === 'knife' && state.cutProgress < 1) {
+                advanceCut(pos.x, pos.y);
+            }
+        }
+
+        function handlePointerUp() {
+            state.pointer.active = false;
+        }
+
+        function advanceCut(px, py) {
+            const targetT = Math.min(1, state.cutProgress + 0.04);
+            const targetPt = getCutCurvePoint(targetT);
+            const dist = Math.hypot(px - targetPt.x, py - targetPt.y);
+
+            if (dist < 85) {
+                state.cutProgress = Math.min(1, state.cutProgress + 0.032);
+                sound.playBarkScrape();
+
+                // เศษเปลือกไม้กระเด็น
+                for (let i = 0; i < 2; i++) {
+                    state.barkChips.push({
+                        x: targetPt.x + (Math.random() - 0.5) * 10,
+                        y: targetPt.y + (Math.random() - 0.5) * 10,
+                        vx: (Math.random() - 0.3) * 85,
+                        vy: -30 - Math.random() * 60,
+                        size: 2.5 + Math.random() * 3,
+                        rot: Math.random() * Math.PI,
+                        life: 1.0
+                    });
+                }
+
+                if (state.cutProgress >= 1) {
+                    state.activeTool = 'spout';
+                    showToast('กรีดเปิดหน้ายางสำเร็จ! ขั้นต่อไปเลือก "ปักลิ่นยาง"');
+                    updateUI();
+                }
+            }
+        }
+
+        function harvestLatex() {
+            if (state.cupFillLevel < 0.05) {
+                showToast('น้ำยางในถ้วยยังน้อยอยู่ รอให้น้ำยางหยดเพิ่มอีกนิดนะ');
+                return;
+            }
+            const wasSolid = state.isSolidified;
+            const baseEarned = Math.max(5, Math.round(state.cupFillLevel * 45));
+            const bonus = wasSolid ? 15 : 0;
+            const earned = baseEarned + bonus;
+
+            state.money += earned;
+            state.cupFillLevel = 0;
+            state.coagTime = 0;
+            state.isSolidified = false;
+            state.cupSwing = 0.09;
+
+            sound.playCoinSound();
+            showToast(wasSolid
+                ? `ขายยางก้อนถ้วยได้ +${earned} ฿!`
+                : `เก็บน้ำยางขายได้ +${earned} ฿!`);
+            updateUI();
+        }
+
+        function startNextDay() {
+            if (state.cutProgress > 0) {
+                state.pastCuts.push({
+                    topY: treeMetrics.cutTopY,
+                    bottomY: treeMetrics.cutBottomY,
+                    day: state.day
+                });
+            }
+
+            if (state.day >= 10) {
+                showToast('กรีดครบหน้ายางต้นนี้แล้ว! เปลี่ยนไปยังต้นยางต้นใหม่');
+                startNewTree();
+                return;
+            }
+
+            state.day += 1;
+            state.cutProgress = 0;
+            state.latexFlowAmount = 0;
+            state.coagTime = 0;
+            state.isSolidified = false;
+            state.activeTool = 'knife';
+            resizeCanvas();
+            showToast(`เช้าวันที่ ${state.day}: กรีดเปิดหน้ายางให้ต่ำลงมาจากรอยเดิมเล็กน้อย`);
+            updateUI();
+        }
+
+        function startNewTree() {
+            state.treeIndex += 1;
+            state.day = 1;
+            state.cutProgress = 0;
+            state.pastCuts = [];
+            state.spoutInstalled = false;
+            state.spoutAnim = 0;
+            state.cupInstalled = false;
+            state.cupAnim = 0;
+            state.latexFlowAmount = 0;
+            state.cupFillLevel = 0;
+            state.coagTime = 0;
+            state.isSolidified = false;
+            state.droplets = [];
+            state.activeTool = 'knife';
+
+            generateTreeAssets();
+            resizeCanvas();
+            showToast(`ย้ายมายังต้นยางต้นที่ ${state.treeIndex}`);
+            updateUI();
+        }
+
+        // Bind UI Buttons
+        document.getElementById('toolKnife').addEventListener('click', () => {
+            state.activeTool = 'knife';
+            updateUI();
+        });
+        document.getElementById('toolSpout').addEventListener('click', () => {
+            state.activeTool = 'spout';
+            updateUI();
+        });
+        document.getElementById('toolCup').addEventListener('click', () => {
+            state.activeTool = 'cup';
+            updateUI();
+        });
+        document.getElementById('newTreeBtn').addEventListener('click', startNewTree);
+        document.getElementById('harvestBtn').addEventListener('click', harvestLatex);
+        document.getElementById('nextDayBtn').addEventListener('click', startNextDay);
+        document.getElementById('squishModeBtn').addEventListener('click', openSlimeMode);
+        document.getElementById('closeSlimeBtn').addEventListener('click', closeSlimeMode);
+        document.getElementById('resetSlimeShapeBtn').addEventListener('click', () => {
+            slimeSim.resetNodes();
+            sound.playSlimeSquish(0.8, true);
+            showToast('ปั้นก้อนยางคืนรูปเดิมแล้ว!');
+        });
+        document.getElementById('sellFromSlimeBtn').addEventListener('click', () => {
+            closeSlimeMode();
+            harvestLatex();
+        });
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            const on = sound.toggle();
+            document.getElementById('soundIcon').textContent = on ? '🔊' : '🔇';
+            showToast(on ? 'เปิดเสียงประกอบแล้ว' : 'ปิดเสียงประกอบแล้ว');
+        });
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handlePointerDown(e);
+        }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handlePointerMove(e);
+        }, { passive: false });
+        canvas.addEventListener('touchend', handlePointerUp);
+
+        // ==========================================
+        // 6. Physics & Coagulation Update Loop
+        // ==========================================
+        function updatePhysics(dt) {
+            if (state.spoutInstalled && state.spoutAnim < 1) {
+                state.spoutAnim = Math.min(1, state.spoutAnim + dt * 5);
+            }
+            if (state.cupInstalled && state.cupAnim < 1) {
+                state.cupAnim = Math.min(1, state.cupAnim + dt * 4);
+            }
+            if (Math.abs(state.cupSwing) > 0.001) {
+                state.cupSwing *= 0.94;
+            }
+
+            // ระบบนับเวลาแข็งตัว 10 วินาที เมื่อมีน้ำยางในถ้วย
+            if (state.cupInstalled && state.cupFillLevel > 0.06 && !state.isSolidified) {
+                state.coagTime = Math.min(state.coagDuration, state.coagTime + dt);
+                if (state.coagTime >= state.coagDuration) {
+                    state.isSolidified = true;
+                    sound.playPeelPop();
+                    showToast('✨ น้ำยางแข็งตัวเป็นยางก้อนถ้วยแล้ว! แตะที่ถ้วยเพื่อแกะมาบีบเล่นได้เลย');
+                }
+                updateUI();
+            }
+
+            // น้ำยางซึมตามร่องกรีด
+            if (state.cutProgress > 0.05 && !state.isSolidified) {
+                state.latexFlowAmount += (state.cutProgress - state.latexFlowAmount) * dt * 2.2;
+            } else if (state.isSolidified) {
+                state.latexFlowAmount = Math.max(0.25, state.latexFlowAmount - dt * 0.15);
+            }
+
+            // สร้างหยดน้ำยางจากปลายลิ่นยางลงถ้วย
+            if (state.cutProgress >= 0.95 && state.latexFlowAmount > 0.55 && !state.isSolidified) {
+                state.dropTimer += dt;
+                const interval = state.cupFillLevel >= 1 ? 1.6 : 0.42;
+                if (state.dropTimer >= interval) {
+                    state.dropTimer = 0;
+                    const endPt = getCutCurvePoint(1.0);
+                    const startX = state.spoutInstalled ? endPt.x + 2 : endPt.x;
+                    const startY = state.spoutInstalled ? endPt.y + 52 : endPt.y + 10;
+
+                    state.droplets.push({
+                        x: startX,
+                        y: startY,
+                        vy: 50,
+                        radius: 4.2
+                    });
+                }
+            }
+
+            // อัปเดตตำแหน่งหยดน้ำยาง
+            for (let i = state.droplets.length - 1; i >= 0; i--) {
+                const d = state.droplets[i];
+                d.vy += 420 * dt;
+                d.y += d.vy * dt;
+
+                if (state.cupInstalled && d.y >= treeMetrics.cupY + 12) {
+                    state.droplets.splice(i, 1);
+                    if (state.cupFillLevel < 1) {
+                        state.cupFillLevel = Math.min(1, state.cupFillLevel + 0.045);
+                        state.cupSwing = (Math.random() - 0.5) * 0.03;
+                        sound.playLatexDrop();
+                        updateUI();
+                    }
+                } else if (d.y > state.height + 20) {
+                    state.droplets.splice(i, 1);
+                }
+            }
+
+            // อัปเดตเศษเปลือกไม้กระเด็น
+            for (let i = state.barkChips.length - 1; i >= 0; i--) {
+                const c = state.barkChips[i];
+                c.vy += 320 * dt;
+                c.x += c.vx * dt;
+                c.y += c.vy * dt;
+                c.rot += 6 * dt;
+                c.life -= dt * 1.4;
+                if (c.life <= 0) state.barkChips.splice(i, 1);
+            }
+        }
+
+        // ==========================================
+        // 7. 2.5D Rubber Plantation Rendering
+        // ==========================================
+        function drawBackground() {
+            // พื้นหลังป่าสวนยางยามเช้า + แสงแดดส่องผ่าน
+            const skyGrad = ctx.createLinearGradient(0, 0, state.width, state.height);
+            skyGrad.addColorStop(0, '#4f6b2e');
+            skyGrad.addColorStop(0.45, '#2b3d19');
+            skyGrad.addColorStop(1, '#141d0c');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, state.width, state.height);
+
+            // แสงแดดยามเช้า (Morning Sunbeams)
+            const sunGrad = ctx.createRadialGradient(state.width * 0.15, state.height * 0.12, 10, state.width * 0.15, state.height * 0.12, state.width * 0.75);
+            sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.34)');
+            sunGrad.addColorStop(0.5, 'rgba(190, 242, 100, 0.10)');
+            sunGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = sunGrad;
+            ctx.fillRect(0, 0, state.width, state.height);
+
+            // ต้นยางระยะไกล (Bokeh Background Trees)
+            treeMetrics.bgTrees.forEach(t => {
+                const tx = state.width * t.relX;
+                const grad = ctx.createLinearGradient(tx - t.width * 0.5, 0, tx + t.width * 0.5, 0);
+                grad.addColorStop(0, '#1e2614');
+                grad.addColorStop(0.4, t.shade);
+                grad.addColorStop(1, '#171f0f');
+                ctx.fillStyle = grad;
+                ctx.fillRect(tx - t.width * 0.5, 0, t.width, state.height);
+
+                if (t.hasCup) {
+                    ctx.fillStyle = '#0c0a09';
+                    ctx.beginPath();
+                    ctx.arc(tx + 3, state.height * 0.62, t.width * 0.28, 0, Math.PI, false);
+                    ctx.fill();
+                }
+            });
+
+            // พื้นดินหญ้าสวนยางด้านล่าง
+            const groundGrad = ctx.createLinearGradient(0, state.height * 0.82, 0, state.height);
+            groundGrad.addColorStop(0, 'rgba(26, 38, 16, 0)');
+            groundGrad.addColorStop(0.4, 'rgba(34, 52, 20, 0.85)');
+            groundGrad.addColorStop(1, '#121c0a');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, state.height * 0.82, state.width, state.height * 0.18);
+        }
+
+        function drawMainRubberTree() {
+            const lx = treeMetrics.leftEdge;
+            const tw = treeMetrics.trunkWidth;
+
+            // เงาทอดของลำต้น
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+            ctx.fillRect(lx + 14, 0, tw, state.height);
+
+            // พื้นผิวลำต้นทรงกระบอก 2.5D
+            const barkGrad = ctx.createLinearGradient(lx, 0, lx + tw, 0);
+            barkGrad.addColorStop(0, '#4a3d2c');
+            barkGrad.addColorStop(0.22, '#7c694f');
+            barkGrad.addColorStop(0.55, '#68563f');
+            barkGrad.addColorStop(0.85, '#473927');
+            barkGrad.addColorStop(1, '#2b2217');
+            ctx.fillStyle = barkGrad;
+            ctx.fillRect(lx, 0, tw, state.height);
+
+            // ร่องแตกแนวตั้งของเปลือกไม้
+            treeMetrics.barkLines.forEach(line => {
+                const bx = treeMetrics.centerX + line.relX * tw;
+                const by = state.height * line.startY;
+                ctx.strokeStyle = `rgba(32, 24, 15, ${line.alpha})`;
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(bx + (Math.random() - 0.5) * 2, by + state.height * line.len);
+                ctx.stroke();
+            });
+
+            // จุดไลเคนสีเขียวอ่อนและเทาตามเปลือกยางพารา (เหมือนภาพจริง)
+            treeMetrics.lichenSpots.forEach(spot => {
+                const sx = treeMetrics.centerX + spot.relX * tw;
+                const sy = state.height * spot.relY;
+                ctx.save();
+                ctx.translate(sx, sy);
+                ctx.rotate(spot.rot);
+                ctx.fillStyle = spot.isGreen
+                    ? 'rgba(134, 179, 134, 0.36)'
+                    : 'rgba(180, 185, 175, 0.28)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, spot.rx, spot.ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // วาดหน้ายางที่ถูกเปิดกรีดไปแล้วในวันก่อนๆ (เนื้อไม้สีน้ำตาลแดงเข้ม)
+            if (state.pastCuts.length > 0) {
+                const firstCut = state.pastCuts[0];
+                const lastCut = state.pastCuts[state.pastCuts.length - 1];
+                ctx.save();
+                ctx.beginPath();
+                const steps = 16;
+                for (let i = 0; i <= steps; i++) {
+                    const p = getCutCurvePoint(i / steps, firstCut.topY - 6, firstCut.bottomY - 6);
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                for (let i = steps; i >= 0; i--) {
+                    const p = getCutCurvePoint(i / steps, lastCut.topY + 4, lastCut.bottomY + 4);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = '#5c3419';
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // ร่องแนวตั้งสำหรับนำทางน้ำยางลงสู่ลิ่นยาง
+            const endPt = getCutCurvePoint(1.0);
+            ctx.strokeStyle = '#472812';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(endPt.x, endPt.y);
+            ctx.lineTo(endPt.x, endPt.y + 62);
+            ctx.stroke();
+
+            // เส้นประนำทางให้กรีด
+            if (state.cutProgress < 1) {
+                ctx.save();
+                ctx.setLineDash([7, 7]);
+                ctx.strokeStyle = 'rgba(253, 224, 71, 0.78)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i <= 20; i++) {
+                    const pt = getCutCurvePoint(i / 20);
+                    if (i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+                ctx.restore();
+
+                // จุดเป้าหมายเริ่มต้น / ปัจจุบัน
+                const curPt = getCutCurvePoint(state.cutProgress);
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(curPt.x, curPt.y, 7 + Math.sin(Date.now() * 0.008) * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // วาดรอยกรีดของวันนี้ (เปลือกไม้ด้านในสีน้ำตาลทอง + น้ำยางสีขาวข้นซึมตามร่อง)
+            if (state.cutProgress > 0) {
+                const maxSteps = Math.max(2, Math.floor(24 * state.cutProgress));
+
+                // เนื้อไม้ด้านในที่เปิดออก
+                ctx.strokeStyle = '#854d27';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = 11;
+                ctx.beginPath();
+                for (let i = 0; i <= maxSteps; i++) {
+                    const t = (i / 24);
+                    const pt = getCutCurvePoint(t);
+                    if (i === 0) ctx.moveTo(pt.x, pt.y - 2);
+                    else ctx.lineTo(pt.x, pt.y - 2);
+                }
+                ctx.stroke();
+
+                // น้ำยางสีขาวข้นไหลตามร่องกรีด
+                if (state.latexFlowAmount > 0.02) {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineCap = 'round';
+                    ctx.lineWidth = 3.5 + state.latexFlowAmount * 3.5;
+                    ctx.beginPath();
+                    for (let i = 0; i <= maxSteps; i++) {
+                        const t = (i / 24);
+                        const pt = getCutCurvePoint(t);
+                        if (i === 0) ctx.moveTo(pt.x, pt.y + 2);
+                        else ctx.lineTo(pt.x, pt.y + 2);
+                    }
+                    ctx.stroke();
+
+                    // น้ำยางไหลลงร่องแนวตั้งไปหาลิ่นยาง
+                    if (state.cutProgress >= 0.95) {
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.moveTo(endPt.x, endPt.y + 2);
+                        ctx.lineTo(endPt.x, endPt.y + 52);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function drawSpout() {
+            const endPt = getCutCurvePoint(1.0);
+            const sx = endPt.x;
+            const sy = endPt.y + 38;
+
+            if (!state.spoutInstalled) {
+                if (state.cutProgress >= 1 && state.activeTool === 'spout') {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 22 + Math.sin(Date.now() * 0.007) * 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                return;
+            }
+
+            ctx.save();
+            const scale = 0.6 + state.spoutAnim * 0.4;
+            ctx.translate(sx, sy);
+            ctx.scale(scale, scale);
+
+            // รางสังกะสีลิ่นยาง
+            const metalGrad = ctx.createLinearGradient(-8, 0, 8, 0);
+            metalGrad.addColorStop(0, '#64748b');
+            metalGrad.addColorStop(0.5, '#e2e8f0');
+            metalGrad.addColorStop(1, '#475569');
+            ctx.fillStyle = metalGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(-7, -12);
+            ctx.lineTo(7, -12);
+            ctx.lineTo(5, 16);
+            ctx.lineTo(0, 22);
+            ctx.lineTo(-5, 16);
+            ctx.closePath();
+            ctx.fill();
+
+            // เส้นน้ำยางสีขาวไหลกลางรางลิ่นยาง
+            if (state.latexFlowAmount > 0.2) {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-2, -12);
+                ctx.lineTo(2, -12);
+                ctx.lineTo(1.5, 21);
+                ctx.lineTo(-1.5, 21);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function drawCup() {
+            const endPt = getCutCurvePoint(1.0);
+            const cx = endPt.x + 2;
+            const cy = treeMetrics.cupY;
+
+            if (!state.cupInstalled) {
+                if (state.spoutInstalled && state.activeTool === 'cup') {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(52, 211, 153, 0.85)';
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([6, 6]);
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + 16, 32 + Math.sin(Date.now() * 0.007) * 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                return;
+            }
+
+            // ลวดคล้องรอบลำต้น
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.moveTo(treeMetrics.leftEdge, cy + 4);
+            ctx.quadraticCurveTo(treeMetrics.centerX, cy + 16, treeMetrics.rightEdge, cy + 4);
+            ctx.stroke();
+
+            // ตัวถ้วยรับน้ำยางสีดำ
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(state.cupSwing);
+            const scale = 0.7 + state.cupAnim * 0.3;
+            ctx.scale(scale, scale);
+
+            const cupGrad = ctx.createLinearGradient(-28, 0, 28, 0);
+            cupGrad.addColorStop(0, '#09090b');
+            cupGrad.addColorStop(0.35, '#27272a');
+            cupGrad.addColorStop(0.75, '#18181b');
+            cupGrad.addColorStop(1, '#000000');
+            ctx.fillStyle = cupGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(-28, 12);
+            ctx.bezierCurveTo(-28, 46, -16, 52, 0, 52);
+            ctx.bezierCurveTo(16, 52, 28, 46, 28, 12);
+            ctx.closePath();
+            ctx.fill();
+
+            // ปากถ้วยวงรี
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            ctx.ellipse(0, 12, 28, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#3f3f46';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // น้ำยางในถ้วย -> แข็งตัวเป็นยางก้อนถ้วยสีขาวนวลอมครีมใน 10 วินาที
+            if (state.cupFillLevel > 0.01) {
+                const coagRatio = Math.min(1, state.coagTime / state.coagDuration);
+                const fillY = 44 - state.cupFillLevel * 28;
+                const fillRx = 18 + state.cupFillLevel * 7.5;
+                const fillRy = 4 + state.cupFillLevel * 1.5 + coagRatio * 3.5;
+
+                const rCenter = 255;
+                const gCenter = Math.round(255 - coagRatio * 10);
+                const bCenter = Math.round(255 - coagRatio * 38);
+
+                const rEdge = Math.round(203 + coagRatio * 22);
+                const gEdge = Math.round(213 - coagRatio * 5);
+                const bEdge = Math.round(225 - coagRatio * 55);
+
+                const latexGrad = ctx.createRadialGradient(-4, fillY - 1, 2, 0, fillY, fillRx);
+                latexGrad.addColorStop(0, `rgb(${rCenter}, ${gCenter}, ${bCenter})`);
+                latexGrad.addColorStop(0.72, `rgb(${rCenter - 8}, ${gCenter - 10}, ${bCenter - 16})`);
+                latexGrad.addColorStop(1, `rgb(${rEdge}, ${gEdge}, ${bEdge})`);
+
+                ctx.fillStyle = latexGrad;
+                ctx.beginPath();
+                ctx.ellipse(0, fillY, fillRx, fillRy, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (coagRatio > 0.35) {
+                    ctx.fillStyle = `rgba(180, 155, 110, ${coagRatio * 0.25})`;
+                    ctx.beginPath();
+                    ctx.arc(-6, fillY - 1, 2.2, 0, Math.PI * 2);
+                    ctx.arc(7, fillY + 1, 1.8, 0, Math.PI * 2);
+                    ctx.arc(1, fillY - 2, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // วงแหวนไฮไลต์ชวนกดเมื่อแข็งตัวครบ 10 วิ
+                if (state.isSolidified) {
+                    const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.12;
+                    ctx.strokeStyle = 'rgba(52, 211, 153, 0.9)';
+                    ctx.lineWidth = 2.2;
+                    ctx.beginPath();
+                    ctx.ellipse(0, fillY, fillRx * pulse, fillRy * pulse, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawDropletsAndParticles() {
+            // หยดน้ำยางสีขาว
+            ctx.fillStyle = '#ffffff';
+            state.droplets.forEach(d => {
+                ctx.beginPath();
+                ctx.ellipse(d.x, d.y, d.radius * 0.85, d.radius * 1.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // เศษเปลือกไม้กระเด็น
+            state.barkChips.forEach(c => {
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate(c.rot);
+                ctx.fillStyle = `rgba(120, 72, 36, ${c.life})`;
+                ctx.fillRect(-c.size, -c.size * 0.6, c.size * 2, c.size * 1.2);
+                ctx.restore();
+            });
+        }
+
+        // ==========================================
+        // 8. Soft-Body ASMR Cup-Lump Slime Simulator
+        // ==========================================
+        const slimeCanvas = document.getElementById('slimeCanvas');
+        const sctx = slimeCanvas.getContext('2d');
+
+        const slimeSim = {
+            nodes: [],
+            numNodes: 36,
+            baseRadius: 130,
+            centerX: 0,
+            centerY: 0,
+            dents: [],
+            bubbles: [],
+            pointer: { x: 0, y: 0, prevX: 0, prevY: 0, down: false },
+
+            init() {
+                this.resize();
+                this.resetNodes();
+            },
+
+            resize() {
+                slimeCanvas.width = window.innerWidth;
+                slimeCanvas.height = window.innerHeight;
+                this.centerX = slimeCanvas.width * 0.5;
+                this.centerY = slimeCanvas.height * 0.5;
+                this.baseRadius = Math.min(Math.max(slimeCanvas.width * 0.28, 110), 175);
+            },
+
+            resetNodes() {
+                this.nodes = [];
+                this.dents = [];
+                this.bubbles = [];
+
+                for (let i = 0; i < this.numNodes; i++) {
+                    const angle = (i / this.numNodes) * Math.PI * 2;
+                    const bowlFactor = Math.sin(angle) < 0
+                        ? 0.86 + Math.abs(Math.cos(angle)) * 0.16
+                        : 1.04;
+                    const r = this.baseRadius * bowlFactor;
+                    const homeX = Math.cos(angle) * r;
+                    const homeY = Math.sin(angle) * r;
+
+                    this.nodes.push({
+                        x: homeX,
+                        y: homeY,
+                        homeX,
+                        homeY,
+                        vx: 0,
+                        vy: 0
+                    });
+                }
+
+                for (let b = 0; b < 26; b++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * this.baseRadius * 0.72;
+                    this.bubbles.push({
+                        relX: Math.cos(ang) * dist,
+                        relY: Math.sin(ang) * dist,
+                        r: 2.5 + Math.random() * 6.5,
+                        alpha: 0.12 + Math.random() * 0.18
+                    });
+                }
+            },
+
+            handleDown(x, y) {
+                sound.init();
+                this.pointer.x = x;
+                this.pointer.y = y;
+                this.pointer.prevX = x;
+                this.pointer.prevY = y;
+                this.pointer.down = true;
+
+                const dx = x - this.centerX;
+                const dy = y - this.centerY;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < this.baseRadius * 1.25) {
+                    sound.playSlimeSquish(0.95, true);
+
+                    this.dents.push({
+                        x: dx,
+                        y: dy,
+                        radius: 28 + Math.random() * 10,
+                        depth: 1.0
+                    });
+                    if (this.dents.length > 14) this.dents.shift();
+
+                    this.applyForce(x, y, 0, 0, true);
+                }
+            },
+
+            handleMove(x, y) {
+                const vx = x - this.pointer.prevX;
+                const vy = y - this.pointer.prevY;
+                this.pointer.prevX = this.pointer.x;
+                this.pointer.prevY = this.pointer.y;
+                this.pointer.x = x;
+                this.pointer.y = y;
+
+                if (!this.pointer.down) return;
+
+                const dx = x - this.centerX;
+                const dy = y - this.centerY;
+                const dist = Math.hypot(dx, dy);
+                const speed = Math.hypot(vx, vy);
+
+                if (dist < this.baseRadius * 1.45 && speed > 1.2) {
+                    sound.playSlimeSquish(Math.min(1, speed / 22), false);
+                    this.applyForce(x, y, vx, vy, false);
+
+                    if (Math.random() > 0.45) {
+                        this.dents.push({
+                            x: dx,
+                            y: dy,
+                            radius: 22 + Math.random() * 8,
+                            depth: 0.85
+                        });
+                        if (this.dents.length > 18) this.dents.shift();
+                    }
+                }
+            },
+
+            handleUp() {
+                this.pointer.down = false;
+            },
+
+            applyForce(px, py, mvx, mvy, isInitialPoke) {
+                const localX = px - this.centerX;
+                const localY = py - this.centerY;
+
+                this.nodes.forEach(n => {
+                    const dist = Math.hypot(n.x - localX, n.y - localY);
+                    const influenceRadius = this.baseRadius * 0.85;
+                    if (dist < influenceRadius) {
+                        const falloff = 1 - dist / influenceRadius;
+                        if (isInitialPoke) {
+                            const outAngle = Math.atan2(n.y, n.x);
+                            n.vx += Math.cos(outAngle) * falloff * 14;
+                            n.vy += Math.sin(outAngle) * falloff * 14;
+                        } else {
+                            n.vx += mvx * falloff * 0.55;
+                            n.vy += mvy * falloff * 0.55;
+                        }
+                    }
+                });
+            },
+
+            update(dt) {
+                const stiffness = 18;
+                const damping = 0.84;
+
+                for (let i = 0; i < this.numNodes; i++) {
+                    const n = this.nodes[i];
+                    const prev = this.nodes[(i - 1 + this.numNodes) % this.numNodes];
+                    const next = this.nodes[(i + 1) % this.numNodes];
+
+                    const fxHome = (n.homeX - n.x) * stiffness;
+                    const fyHome = (n.homeY - n.y) * stiffness;
+
+                    const avgNeighborX = (prev.x + next.x) * 0.5;
+                    const avgNeighborY = (prev.y + next.y) * 0.5;
+                    const fxSmooth = (avgNeighborX - n.x) * 26;
+                    const fySmooth = (avgNeighborY - n.y) * 26;
+
+                    n.vx = (n.vx + (fxHome + fxSmooth) * dt) * damping;
+                    n.vy = (n.vy + (fyHome + fySmooth) * dt) * damping;
+
+                    n.x += n.vx;
+                    n.y += n.vy;
+                }
+
+                for (let i = this.dents.length - 1; i >= 0; i--) {
+                    this.dents[i].depth -= dt * 0.22;
+                    if (this.dents[i].depth <= 0) {
+                        this.dents.splice(i, 1);
+                    }
+                }
+            },
+
+            draw() {
+                const w = slimeCanvas.width;
+                const h = slimeCanvas.height;
+                sctx.clearRect(0, 0, w, h);
+
+                const bgRad = sctx.createRadialGradient(this.centerX, this.centerY, 30, this.centerX, this.centerY, w * 0.65);
+                bgRad.addColorStop(0, 'rgba(42, 54, 36, 0.65)');
+                bgRad.addColorStop(1, 'rgba(12, 16, 10, 0.92)');
+                sctx.fillStyle = bgRad;
+                sctx.fillRect(0, 0, w, h);
+
+                sctx.save();
+                sctx.translate(this.centerX, this.centerY);
+
+                const buildSmoothPath = () => {
+                    sctx.beginPath();
+                    for (let i = 0; i < this.numNodes; i++) {
+                        const curr = this.nodes[i];
+                        const next = this.nodes[(i + 1) % this.numNodes];
+                        const midX = (curr.x + next.x) * 0.5;
+                        const midY = (curr.y + next.y) * 0.5;
+                        if (i === 0) {
+                            const prev = this.nodes[this.numNodes - 1];
+                            sctx.moveTo((prev.x + curr.x) * 0.5, (prev.y + curr.y) * 0.5);
+                        }
+                        sctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
+                    }
+                    sctx.closePath();
+                };
+
+                // เงาใต้ก้อนยาง
+                sctx.save();
+                sctx.translate(0, 22);
+                buildSmoothPath();
+                sctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                sctx.fill();
+                sctx.restore();
+
+                // ตัวก้อนยางก้อนถ้วย
+                buildSmoothPath();
+                const lumpGrad = sctx.createRadialGradient(-35, -40, 15, 0, 0, this.baseRadius * 1.25);
+                lumpGrad.addColorStop(0, '#fffef7');
+                lumpGrad.addColorStop(0.45, '#f7eed2');
+                lumpGrad.addColorStop(0.82, '#e3d0a1');
+                lumpGrad.addColorStop(1, '#bfa56a');
+                sctx.fillStyle = lumpGrad;
+                sctx.fill();
+
+                // คลิปด้านในก้อนยาง
+                sctx.save();
+                buildSmoothPath();
+                sctx.clip();
+
+                this.bubbles.forEach(b => {
+                    sctx.beginPath();
+                    sctx.arc(b.relX, b.relY, b.r, 0, Math.PI * 2);
+                    sctx.fillStyle = `rgba(185, 158, 102, ${b.alpha})`;
+                    sctx.fill();
+                });
+
+                this.dents.forEach(d => {
+                    const dentGrad = sctx.createRadialGradient(
+                        d.x - d.radius * 0.2, d.y - d.radius * 0.2, 2,
+                        d.x, d.y, d.radius
+                    );
+                    dentGrad.addColorStop(0, `rgba(150, 122, 70, ${0.42 * d.depth})`);
+                    dentGrad.addColorStop(0.65, `rgba(195, 168, 112, ${0.22 * d.depth})`);
+                    dentGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    sctx.fillStyle = dentGrad;
+                    sctx.beginPath();
+                    sctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+                    sctx.fill();
+                });
+
+                sctx.beginPath();
+                sctx.ellipse(-42, -52, 34, 14, -0.5, 0, Math.PI * 2);
+                sctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+                sctx.fill();
+
+                sctx.restore();
+                sctx.restore();
+            }
+        };
+
+        slimeCanvas.addEventListener('mousedown', e => slimeSim.handleDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => {
+            if (state.slimeModeOpen) slimeSim.handleMove(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', () => {
+            if (state.slimeModeOpen) slimeSim.handleUp();
+        });
+        slimeCanvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                slimeSim.handleDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+        slimeCanvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                slimeSim.handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+        slimeCanvas.addEventListener('touchend', () => slimeSim.handleUp());
+
+        function openSlimeMode() {
+            state.slimeModeOpen = true;
+            slimeSim.init();
+            sound.playPeelPop();
+            document.getElementById('slimeModal').classList.remove('hidden');
+        }
+
+        function closeSlimeMode() {
+            state.slimeModeOpen = false;
+            document.getElementById('slimeModal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // 9. Main Animation Loop
+        // ==========================================
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000 || 0.016);
+            lastTime = timestamp;
+
+            if (state.slimeModeOpen) {
+                slimeSim.update(dt);
+                slimeSim.draw();
+            } else {
+                updatePhysics(dt);
+                ctx.clearRect(0, 0, state.width, state.height);
+                drawBackground();
+                drawMainRubberTree();
+                drawSpout();
+                drawCup();
+                drawDropletsAndParticles();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            generateTreeAssets();
+            resizeCanvas();
+            slimeSim.init();
+            updateUI();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                slimeSim.resize();
+            });
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
